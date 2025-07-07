@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Paper,
@@ -24,70 +24,52 @@ import {
   Select,
   MenuItem,
   Chip,
-  Alert
-} from '@mui/material';
+  Alert,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
-  Download as DownloadIcon
-} from '@mui/icons-material';
+  Download as DownloadIcon,
+} from "@mui/icons-material";
+import { useEffect } from "react";
 
-// Static data for existing codes
-const existingCodes = [
-  {
-    id: '1',
-    code: 'SUMMER2024',
-    type: 'coupon',
-    discount: 20,
-    minPurchase: 100,
-    validFrom: '2024-06-01',
-    validUntil: '2024-08-31',
-    usageLimit: 1000,
-    usedCount: 450,
-    status: 'active'
-  },
-  {
-    id: '2',
-    code: 'WELCOME10',
-    type: 'coupon',
-    discount: 10,
-    minPurchase: 50,
-    validFrom: '2024-01-01',
-    validUntil: '2024-12-31',
-    usageLimit: 5000,
-    usedCount: 2345,
-    status: 'active'
-  },
-  {
-    id: '3',
-    code: 'SCRATCH001',
-    type: 'scratch',
-    discount: 15,
-    validFrom: '2024-05-01',
-    validUntil: '2024-05-31',
-    usageLimit: 100,
-    usedCount: 75,
-    status: 'active'
-  }
-];
+
+const [existingCodes, setExistingCodes] = useState([]);
+
+
+useEffect(() => {
+  const fetchCodes = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/promotions/");
+      if (!res.ok) throw new Error("Failed to fetch codes");
+      const data = await res.json();
+      setExistingCodes(data);
+    } catch (err) {
+      console.error("Error fetching codes:", err);
+    }
+  };
+
+  fetchCodes();
+}, []);
+
 
 function Promotions() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
-  const [codeType, setCodeType] = useState('coupon');
+  const [codeType, setCodeType] = useState("coupon");
   const [generatedCodes, setGeneratedCodes] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
-    discount: '',
-    minPurchase: '',
-    validFrom: '',
-    validUntil: '',
-    usageLimit: '',
-    quantity: '1'
+    discount: "",
+    minPurchase: "",
+    validFrom: "",
+    validUntil: "",
+    usageLimit: "",
+    quantity: "1",
   });
 
   const handleChangePage = (event, newPage) => {
@@ -106,34 +88,32 @@ function Promotions() {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setFormData({
-      discount: '',
-      minPurchase: '',
-      validFrom: '',
-      validUntil: '',
-      usageLimit: '',
-      quantity: '1'
+      discount: "",
+      minPurchase: "",
+      validFrom: "",
+      validUntil: "",
+      usageLimit: "",
+      quantity: "1",
     });
   };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
-  const generateCode = () => {
+  const generateCode = async () => {
     const codes = [];
     const quantity = parseInt(formData.quantity);
-    
+
     for (let i = 0; i < quantity; i++) {
-      const code = codeType === 'coupon' 
-        ? generateCouponCode()
-        : generateScratchCode();
-      
+      const code =
+        codeType === "coupon" ? generateCouponCode() : generateScratchCode();
+
       codes.push({
-        id: Date.now() + i,
         code,
         type: codeType,
         discount: parseInt(formData.discount),
@@ -142,18 +122,34 @@ function Promotions() {
         validUntil: formData.validUntil,
         usageLimit: parseInt(formData.usageLimit),
         usedCount: 0,
-        status: 'active'
+        status: "active",
       });
     }
-    
-    setGeneratedCodes(codes);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/promotions/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ codes }),
+      });
+
+      if (res.ok) {
+        setGeneratedCodes(codes);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      } else {
+        console.error("Failed to save codes to backend");
+      }
+    } catch (err) {
+      console.error("Error while saving codes:", err);
+    }
   };
 
   const generateCouponCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
     for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -161,8 +157,8 @@ function Promotions() {
   };
 
   const generateScratchCode = () => {
-    const chars = '0123456789';
-    let code = '';
+    const chars = "0123456789";
+    let code = "";
     for (let i = 0; i < 12; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -174,15 +170,20 @@ function Promotions() {
   };
 
   const handleDownloadCodes = () => {
-    const csvContent = generatedCodes.map(code => 
-      `${code.code},${code.type},${code.discount}%,${code.minPurchase},${code.validFrom},${code.validUntil},${code.usageLimit}`
-    ).join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = generatedCodes
+      .map(
+        (code) =>
+          `${code.code},${code.type},${code.discount}%,${code.minPurchase},${code.validFrom},${code.validUntil},${code.usageLimit}`
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${codeType}_codes_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `${codeType}_codes_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -191,23 +192,28 @@ function Promotions() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active':
-        return 'success';
-      case 'expired':
-        return 'error';
-      case 'used':
-        return 'warning';
+      case "active":
+        return "success";
+      case "expired":
+        return "error";
+      case "used":
+        return "warning";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Promotions
-        </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4">Promotions</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -225,14 +231,16 @@ function Promotions() {
 
       {generatedCodes.length > 0 && (
         <Paper sx={{ p: 2, mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              Generated Codes
-            </Typography>
-            <Button
-              startIcon={<DownloadIcon />}
-              onClick={handleDownloadCodes}
-            >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">Generated Codes</Typography>
+            <Button startIcon={<DownloadIcon />} onClick={handleDownloadCodes}>
               Download CSV
             </Button>
           </Box>
@@ -256,7 +264,7 @@ function Promotions() {
                     <TableCell>
                       <Chip
                         label={code.type}
-                        color={code.type === 'coupon' ? 'primary' : 'secondary'}
+                        color={code.type === "coupon" ? "primary" : "secondary"}
                         size="small"
                       />
                     </TableCell>
@@ -266,7 +274,10 @@ function Promotions() {
                     <TableCell>{code.usageLimit}</TableCell>
                     <TableCell>
                       <Tooltip title="Copy Code">
-                        <IconButton size="small" onClick={() => handleCopyCode(code.code)}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCopyCode(code.code)}
+                        >
                           <CopyIcon />
                         </IconButton>
                       </Tooltip>
@@ -279,7 +290,7 @@ function Promotions() {
         </Paper>
       )}
 
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer>
           <Table stickyHeader>
             <TableHead>
@@ -304,7 +315,7 @@ function Promotions() {
                     <TableCell>
                       <Chip
                         label={code.type}
-                        color={code.type === 'coupon' ? 'primary' : 'secondary'}
+                        color={code.type === "coupon" ? "primary" : "secondary"}
                         size="small"
                       />
                     </TableCell>
@@ -312,7 +323,9 @@ function Promotions() {
                     <TableCell>${code.minPurchase}</TableCell>
                     <TableCell>{code.validFrom}</TableCell>
                     <TableCell>{code.validUntil}</TableCell>
-                    <TableCell>{code.usedCount}/{code.usageLimit}</TableCell>
+                    <TableCell>
+                      {code.usedCount}/{code.usageLimit}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={code.status}
@@ -349,7 +362,9 @@ function Promotions() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Generate {codeType === 'coupon' ? 'Coupon' : 'Scratch'} Codes</DialogTitle>
+        <DialogTitle>
+          Generate {codeType === "coupon" ? "Coupon" : "Scratch"} Codes
+        </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
@@ -444,4 +459,4 @@ function Promotions() {
   );
 }
 
-export default Promotions; 
+export default Promotions;

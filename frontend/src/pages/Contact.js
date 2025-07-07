@@ -74,21 +74,41 @@ const Contact = ({ mode }) => {
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would typically send the form data to your backend
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch("http://localhost:5000/api/email/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      setSnackbar({
+        open: true,
+        message: "Thank you! We've received your message.",
+        severity: "success",
+      });
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } else {
+      throw new Error(result.message || "Failed to send message.");
+    }
+  } catch (error) {
     setSnackbar({
       open: true,
-      message: "Thank you for your message. We will get back to you soon!",
-      severity: "success",
+      message: error.message,
+      severity: "error",
     });
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    });
-  };
+  }
+};
+
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });

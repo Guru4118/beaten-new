@@ -229,6 +229,66 @@ class EmailService {
       return { success: false, error: error.message };
     }
   }
+async sendFormSubmissionEmail({ name, email, subject, message }) {
+  const userHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #1a1a1a; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">BEATEN</h1>
+      </div>
+      <div style="padding: 30px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">Hi ${name},</h2>
+        <p>Thank you for contacting BEATEN. We've received your message and will get back to you soon.</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Your Message:</strong><br/>${message}</p>
+      </div>
+      <div style="background-color: #f0f0f0; padding: 20px; text-align: center; color: #666; font-size: 12px;">
+        <p>© 2024 BEATEN. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+
+  const adminHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #1a1a1a; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">BEATEN - Contact Form Submission</h1>
+      </div>
+      <div style="padding: 30px; background-color: #f9f9f9;">
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong><br/>${message}</p>
+      </div>
+      <div style="background-color: #f0f0f0; padding: 20px; text-align: center; color: #666; font-size: 12px;">
+        <p>© 2024 BEATEN. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+
+  try {
+    await this.transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: `BEATEN - We received your message: ${subject}`,
+      html: userHtml,
+    });
+
+    await this.transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: adminEmail,
+      subject: `New Contact Message from ${name}: ${subject}`,
+      html: adminHtml,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending form emails:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+
 }
 
 module.exports = new EmailService(); 

@@ -13,6 +13,8 @@ const productsRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const ordersRoutes = require('./routes/orders');
 const uploadRoutes = require('./routes/upload');
+const emailRoutes = require('./routes/email'); 
+const promotionRoutes = require('./routes/Promotions');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -65,6 +67,8 @@ app.use('/api/products', productsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // 404 handler
 app.use(notFound);
