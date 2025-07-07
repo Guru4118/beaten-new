@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Test - BEATEN</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .image-test {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .image-test img {
+            max-width: 200px;
+            height: auto;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>BEATEN Image Test</h1>
+    <p>This page tests if all images are accessible from the deployed site.</p>
+    
+    <div class="image-test">
+        <h3>Logo Test</h3>
+        <img src="/Beaten/logo.png" alt="Logo" onload="this.parentElement.innerHTML += '<p class=\'success\'>✓ Logo loaded successfully</p>'" onerror="this.parentElement.innerHTML += '<p class=\'error\'>✗ Logo failed to load</p>'">
+    </div>
+    
+    <div class="image-test">
+        <h3>Artboard 3 copy Test</h3>
+        <img src="/Beaten/Artboard 3 copy.png" alt="Artboard 3 copy" onload="this.parentElement.innerHTML += '<p class=\'success\'>✓ Artboard 3 copy loaded successfully</p>'" onerror="this.parentElement.innerHTML += '<p class=\'error\'>✗ Artboard 3 copy failed to load</p>'">
+    </div>
+    
+    <div class="image-test">
+        <h3>Hero Image Test</h3>
+        <img src="/Beaten/hero1.jpeg" alt="Hero" onload="this.parentElement.innerHTML += '<p class=\'success\'>✓ Hero image loaded successfully</p>'" onerror="this.parentElement.innerHTML += '<p class=\'error\'>✗ Hero image failed to load</p>'">
+    </div>
+    
+    <div class="image-test">
+        <h3>Artboard 3 Test</h3>
+        <img src="/Beaten/Artboard 3.png" alt="Artboard 3" onload="this.parentElement.innerHTML += '<p class=\'success\'>✓ Artboard 3 loaded successfully</p>'" onerror="this.parentElement.innerHTML += '<p class=\'error\'>✗ Artboard 3 failed to load</p>'">
+    </div>
+</body>
+</html> 

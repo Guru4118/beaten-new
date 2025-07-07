@@ -1,0 +1,530 @@
+# BEATEN E-commerce Platform API Documentation
+
+## Table of Contents
+1. [Base URL](#base-url)
+2. [Authentication](#authentication)
+3. [Customer APIs](#customer-apis)
+4. [Admin APIs](#admin-apis)
+5. [Models](#models)
+6. [Error Handling](#error-handling)
+7. [Best Practices](#best-practices)
+
+## Base URL
+```
+Development: http://localhost:5000/api
+Production: https://api.beaten.com/api
+```
+
+## Authentication
+All protected routes require a Bearer token in the Authorization header:
+```
+Authorization: Bearer <token>
+```
+
+## Customer APIs
+
+### 1. Authentication
+#### Register User
+- **POST** `/auth/register`
+- **Description:** Register a new user account
+- **Body:**
+```json
+{
+  "name": "string",
+  "email": "string",
+  "phone": "string",
+  "password": "string"
+}
+```
+- **Response (200):**
+```json
+{
+  "token": "jwt_token",
+  "user": {
+    "id": "user_id",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+919876543210"
+  }
+}
+```
+
+#### Login
+- **POST** `/auth/login`
+- **Description:** Login with email/phone and password
+- **Body:**
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+- **Response:** Same as Register
+
+#### Social Login
+- **POST** `/auth/social-login`
+- **Body:**
+```json
+{
+  "provider": "google|facebook",
+  "token": "oauth_token"
+}
+```
+
+#### Forgot Password
+- **POST** `/auth/forgot-password`
+- **Body:** `{ "email": "string" }`
+
+#### Reset Password
+- **POST** `/auth/reset-password/:token`
+- **Body:** `{ "password": "string" }`
+
+#### Get Current User
+- **GET** `/auth/me`
+- **Protected:** Yes
+
+### 2. User Management
+#### Update Profile
+- **PUT** `/users/profile`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "name": "string",
+  "gender": "string",
+  "dob": "string",
+  "phone": "string",
+  "email": "string",
+  "avatar": "file"
+}
+```
+
+#### Change Password
+- **PUT** `/users/change-password`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "currentPassword": "string",
+  "newPassword": "string"
+}
+```
+
+### 3. Address Management
+#### Get User Addresses
+- **GET** `/user/addresses`
+- **Protected:** Yes
+
+#### Add New Address
+- **POST** `/user/addresses`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "name": "string",
+  "phone": "string",
+  "street": "string",
+  "city": "string",
+  "state": "string",
+  "pincode": "string",
+  "isDefault": boolean
+}
+```
+
+#### Update Address
+- **PUT** `/user/addresses/:id`
+- **Protected:** Yes
+- **Body:** Same as Add
+
+#### Delete Address
+- **DELETE** `/user/addresses/:id`
+- **Protected:** Yes
+
+### 4. Cart Management
+#### Get Cart
+- **GET** `/cart`
+- **Protected:** Yes
+
+#### Add to Cart
+- **POST** `/cart`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "productId": "string",
+  "quantity": number,
+  "size": "string",
+  "color": "string"
+}
+```
+
+#### Update Cart Item
+- **PUT** `/cart/:itemId`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "quantity": number
+}
+```
+
+#### Remove from Cart
+- **DELETE** `/cart/:itemId`
+- **Protected:** Yes
+
+### 5. Products
+#### List Products
+- **GET** `/products`
+- **Query Parameters:**
+```json
+{
+  "category": "string",
+  "subCategory": "string",
+  "collection": "string",
+  "gender": "string",
+  "priceRange": "[min,max]",
+  "sort": "newest|price_asc|price_desc|popular",
+  "size": "string[]",
+  "color": "string[]",
+  "fit": "string[]",
+  "page": "number",
+  "limit": "number"
+}
+```
+
+#### Get Product Details
+- **GET** `/products/:id`
+
+### 6. Orders
+#### Create Order
+- **POST** `/orders`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "items": [{
+    "product": "product_id",
+    "quantity": number,
+    "size": "string",
+    "color": "string"
+  }],
+  "shippingAddress": "address_id",
+  "paymentMethod": "razorpay|cod",
+  "couponCode": "string?"
+}
+```
+
+#### List User Orders
+- **GET** `/orders`
+- **Protected:** Yes
+
+#### Get Order Details
+- **GET** `/orders/:orderId`
+- **Protected:** Yes
+
+#### Cancel Order
+- **POST** `/orders/:orderId/cancel`
+- **Protected:** Yes
+
+### 7. Premium Membership
+#### Get Plans
+- **GET** `/premium/plans`
+
+#### Subscribe
+- **POST** `/premium/subscribe`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "planId": "string"
+}
+```
+
+## Admin APIs
+
+### 1. Authentication
+#### Admin Login
+- **POST** `/admin/auth/login`
+- **Body:**
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+
+### 2. Dashboard
+#### Get Statistics
+- **GET** `/admin/dashboard/stats`
+- **Protected:** Yes
+- **Response:**
+```json
+{
+  "totalOrders": number,
+  "totalRevenue": number,
+  "totalCustomers": number,
+  "totalProducts": number,
+  "recentOrders": [],
+  "topProducts": [],
+  "salesGraph": []
+}
+```
+
+### 3. Product Management
+#### Create Product
+- **POST** `/admin/products`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "name": "string",
+  "description": "string",
+  "price": number,
+  "salePrice": number,
+  "category": "string",
+  "subCategory": "string",
+  "collection": "string",
+  "gender": "string",
+  "sizes": ["string"],
+  "colors": [{
+    "name": "string",
+    "code": "string",
+    "images": ["string"]
+  }],
+  "fit": "string",
+  "inStock": boolean,
+  "featured": boolean
+}
+```
+
+#### Update Product
+- **PUT** `/admin/products/:id`
+- **Protected:** Yes
+
+#### Delete Product
+- **DELETE** `/admin/products/:id`
+- **Protected:** Yes
+
+#### Bulk Operations
+- **POST** `/admin/products/bulk`
+- **Protected:** Yes
+- **Operations:** update-price, update-stock, delete
+
+### 4. Order Management
+#### List All Orders
+- **GET** `/admin/orders`
+- **Protected:** Yes
+- **Query:** status, dateRange, search
+
+#### Update Order Status
+- **PUT** `/admin/orders/:id/status`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "status": "processing|shipped|delivered|cancelled",
+  "trackingId": "string?",
+  "comment": "string?"
+}
+```
+
+### 5. Customer Management
+#### List Customers
+- **GET** `/admin/customers`
+- **Protected:** Yes
+- **Query:** status, dateRange, search
+
+#### View Customer Details
+- **GET** `/admin/customers/:id`
+- **Protected:** Yes
+
+#### Update Customer Status
+- **PUT** `/admin/customers/:id/status`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "status": "active|blocked",
+  "reason": "string?"
+}
+```
+
+### 6. Inventory Management
+#### Get Inventory
+- **GET** `/admin/inventory`
+- **Protected:** Yes
+
+#### Update Inventory
+- **PUT** `/admin/inventory/:productId`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "size": "string",
+  "color": "string",
+  "quantity": number
+}
+```
+
+### 7. Collection Management
+#### Create Collection
+- **POST** `/admin/collections`
+- **Protected:** Yes
+- **Body:**
+```json
+{
+  "name": "string",
+  "description": "string",
+  "image": "string",
+  "products": ["product_ids"],
+  "startDate": "date",
+  "endDate": "date?"
+}
+```
+
+#### Update Collection
+- **PUT** `/admin/collections/:id`
+- **Protected:** Yes
+
+## Models
+
+### User
+```json
+{
+  "_id": "string",
+  "name": "string",
+  "email": "string",
+  "phone": "string",
+  "gender": "string",
+  "dob": "date",
+  "avatar": "string",
+  "isPremium": boolean,
+  "premiumExpiry": "date",
+  "addresses": ["address_ids"],
+  "status": "active|blocked",
+  "role": "user|admin",
+  "createdAt": "date",
+  "updatedAt": "date"
+}
+```
+
+### Product
+```json
+{
+  "_id": "string",
+  "name": "string",
+  "description": "string",
+  "price": number,
+  "salePrice": number,
+  "category": "string",
+  "subCategory": "string",
+  "collection": "string",
+  "gender": "string",
+  "sizes": ["string"],
+  "colors": [{
+    "name": "string",
+    "code": "string",
+    "images": ["string"]
+  }],
+  "fit": "string",
+  "featured": boolean,
+  "inStock": boolean,
+  "inventory": [{
+    "size": "string",
+    "color": "string",
+    "quantity": number
+  }],
+  "ratings": {
+    "average": number,
+    "count": number
+  },
+  "createdAt": "date",
+  "updatedAt": "date"
+}
+```
+
+### Order
+```json
+{
+  "_id": "string",
+  "user": "user_id",
+  "items": [{
+    "product": "product_id",
+    "quantity": number,
+    "size": "string",
+    "color": "string",
+    "price": number
+  }],
+  "shippingAddress": "address_id",
+  "total": number,
+  "discount": number,
+  "couponCode": "string",
+  "status": "pending|processing|shipped|delivered|cancelled",
+  "paymentMethod": "razorpay|cod",
+  "paymentStatus": "pending|completed|failed",
+  "razorpayOrderId": "string",
+  "razorpayPaymentId": "string",
+  "trackingId": "string",
+  "deliveryDate": "date",
+  "cancelReason": "string",
+  "createdAt": "date",
+  "updatedAt": "date"
+}
+```
+
+## Error Handling
+All error responses follow this format:
+```json
+{
+  "status": "error",
+  "code": number,
+  "message": "Error description",
+  "details": {} // Additional error details if any
+}
+```
+
+Common HTTP Status Codes:
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 429: Too Many Requests
+- 500: Internal Server Error
+
+## Best Practices
+
+### Rate Limiting
+- Regular users: 100 requests/minute
+- Premium users: 200 requests/minute
+- Admin users: 500 requests/minute
+
+### Security
+- All passwords must be at least 8 characters
+- OTP validity: 5 minutes
+- JWT token validity: 7 days
+- Refresh token validity: 30 days
+
+### File Upload
+- Supported image formats: JPG, PNG, WebP
+- Maximum file size: 5MB
+- Images are processed and stored in multiple resolutions
+- CDN is used for image delivery
+
+### Caching
+- Product listings: 5 minutes
+- Product details: 10 minutes
+- Collections: 15 minutes
+
+### Pagination
+- Default page size: 20
+- Maximum page size: 100
+
+### Notes
+- All timestamps are in ISO 8601 format
+- All IDs are MongoDB ObjectIds
+- Prices are in INR (Indian Rupees)
+- Phone numbers must be in E.164 format
+- Images should be uploaded to a CDN
+- Payment integration is handled through Razorpay 
