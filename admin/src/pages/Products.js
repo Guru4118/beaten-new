@@ -319,6 +319,13 @@ function Products() {
     }
   };
 
+  const sortOptions = [
+  { value: "latest", label: "Latest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "priceAsc", label: "Price: Low to High" },
+  { value: "priceDesc", label: "Price: High to Low" },
+];
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());

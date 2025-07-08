@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import {
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';import {
   Box,
   Paper,
   Typography,
@@ -75,140 +75,8 @@ import {
   History as ViewHistoryIcon
 } from '@mui/icons-material';
 
-// Static data
-const orders = [
-  {
-    _id: '1',
-    orderNumber: 'ORD-2024-001',
-    customer: {
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 234 567 8900'
-    },
-    date: '2024-03-15',
-    total: 299.97,
-    status: 'Delivered',
-    paymentMethod: 'Credit Card',
-    shippingAddress: '123 Main St, City, Country',
-    items: [
-      {
-        product: 'Classic White Sneakers',
-        quantity: 2,
-        price: 89.99,
-        image: '/products/sneakers-1.jpg'
-      },
-      {
-        product: 'Black Leather Boots',
-        quantity: 1,
-        price: 119.99,
-        image: '/products/boots-1.jpg'
-      }
-    ],
-    trackingNumber: 'TRK123456789',
-    notes: 'Handle with care',
-    createdAt: '2024-03-15T10:30:00Z'
-  },
-  {
-    _id: '2',
-    orderNumber: 'ORD-2024-002',
-    customer: {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1 234 567 8901'
-    },
-    date: '2024-03-14',
-    total: 149.99,
-    status: 'Processing',
-    paymentMethod: 'PayPal',
-    shippingAddress: '456 Oak St, City, Country',
-    items: [
-      {
-        product: 'Running Shoes',
-        quantity: 1,
-        price: 149.99,
-        image: '/products/running-1.jpg'
-      }
-    ],
-    trackingNumber: null,
-    notes: '',
-    createdAt: '2024-03-14T15:45:00Z'
-  },
-  {
-    _id: '3',
-    orderNumber: 'ORD-2024-003',
-    customer: {
-      name: 'Mike Johnson',
-      email: 'mike@example.com',
-      phone: '+1 234 567 8902'
-    },
-    date: '2024-03-13',
-    total: 79.99,
-    status: 'Shipped',
-    paymentMethod: 'Credit Card',
-    shippingAddress: '789 Pine St, City, Country',
-    items: [
-      {
-        product: 'Casual Loafers',
-        quantity: 1,
-        price: 79.99,
-        image: '/products/loafers-1.jpg'
-      }
-    ],
-    trackingNumber: 'TRK987654321',
-    notes: 'Gift wrapping requested',
-    createdAt: '2024-03-13T09:15:00Z'
-  },
-  {
-    _id: '4',
-    orderNumber: 'ORD-2024-004',
-    customer: {
-      name: 'Sarah Wilson',
-      email: 'sarah@example.com',
-      phone: '+1 234 567 8903'
-    },
-    date: '2024-03-12',
-    total: 259.98,
-    status: 'Pending',
-    paymentMethod: 'Bank Transfer',
-    shippingAddress: '321 Elm St, City, Country',
-    items: [
-      {
-        product: 'Formal Oxfords',
-        quantity: 2,
-        price: 129.99,
-        image: '/products/oxfords-1.jpg'
-      }
-    ],
-    trackingNumber: null,
-    notes: '',
-    createdAt: '2024-03-12T14:20:00Z'
-  },
-  {
-    _id: '5',
-    orderNumber: 'ORD-2024-005',
-    customer: {
-      name: 'David Brown',
-      email: 'david@example.com',
-      phone: '+1 234 567 8904'
-    },
-    date: '2024-03-11',
-    total: 449.97,
-    status: 'Cancelled',
-    paymentMethod: 'Credit Card',
-    shippingAddress: '654 Maple St, City, Country',
-    items: [
-      {
-        product: 'Black Leather Boots',
-        quantity: 3,
-        price: 149.99,
-        image: '/products/boots-1.jpg'
-      }
-    ],
-    trackingNumber: null,
-    notes: 'Customer requested cancellation',
-    createdAt: '2024-03-11T11:10:00Z'
-  }
-];
+
+
 
 const statuses = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 const sortOptions = [
@@ -220,6 +88,7 @@ const sortOptions = [
 ];
 
 function Orders() {
+   
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -232,7 +101,9 @@ function Orders() {
   const [totalRange, setTotalRange] = useState({ min: '', max: '' });
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
-
+ const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  
   // Define orderStatuses inside the component to access the imported icons
   const orderStatuses = [
     { value: 'Pending', color: 'warning', icon: <PendingTimeIcon /> },
@@ -241,6 +112,24 @@ function Orders() {
     { value: 'Delivered', color: 'success', icon: <DeliveredIcon /> },
     { value: 'Cancelled', color: 'error', icon: <CancelledIcon /> },
   ];
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const token = localStorage.getItem('admin_token');
+        const res = await axios.get('http://localhost:5000/api/orders/admin', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setOrders(res.data);
+        setFilteredOrders(res.data); // if you want filtering
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -352,7 +241,7 @@ function Orders() {
     setNewStatus('');
   };
 
-  const filteredOrders = orders.filter(order => {
+  const updateFilteredOrders = orders.filter(order => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -395,8 +284,6 @@ function Orders() {
         return 'default';
     }
   };
-
-  
 
   const OrderDetails = ({ order }) => (
     <Box>

@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['user', 'admin'],
-    default: 'user'
+    default: 'admin'
   },
   status: {
     type: String,
@@ -74,7 +74,7 @@ const userSchema = new mongoose.Schema({
   }],
   permissions: [{
     type: String,
-    default: []
+    default: ["manage_orders", "manage_users"]
   }],
   emailVerified: {
     type: Boolean,
