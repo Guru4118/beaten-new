@@ -16,9 +16,9 @@ import {
   CircularProgress,
   IconButton,
 } from "@mui/material";
-import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
-import PaymentsIcon from '@mui/icons-material/Payments';
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { formatPrice } from "../utils/format";
@@ -65,6 +65,9 @@ const Payment = ({ mode = "dark" }) => {
     setLoading(true);
     setError("");
     try {
+      // Calculate total with COD charge if applicable
+      const finalTotal = paymentMethod === "cod" ? total + 50 : total;
+
       const orderResponse = await ordersAPI.createOrder({
         items: cart.map((item) => ({
           product: item.product._id,
@@ -73,35 +76,50 @@ const Payment = ({ mode = "dark" }) => {
           color: item.color,
           price: item.product.price,
         })),
-        shippingAddress: selectedAddress,
+        shippingAddress: {
+          address: String,
+          city: String,
+          postalCode: String,
+          state: String,
+          country: String,
+        },
+
         paymentMethod,
-        total,
+        totalAmount: finalTotal, // Must be a number
         codCharge: paymentMethod === "cod" ? 50 : 0,
       });
 
-      if (
-        paymentMethod === "razorpay" &&
-        orderResponse.data.razorpayOrderId &&
-        orderResponse.data.amount
-      ) {
+      // For Razorpay payments
+      if (paymentMethod === "razorpay") {
+        if (!orderResponse.data.razorpayOrderId) {
+          throw new Error("Missing Razorpay order ID");
+        }
+
         const options = {
           key: process.env.REACT_APP_RAZORPAY_KEY,
-          amount: orderResponse.data.amount * 100, // in paise
+          amount: orderResponse.data.amount * 100,
           currency: "INR",
           name: "BEATEN",
           description: "Order Payment",
           order_id: orderResponse.data.razorpayOrderId,
           handler: async function (response) {
             try {
+              // Use the verifyPayment method from ordersAPI
               await ordersAPI.verifyPayment({
-                orderId: orderResponse.data._id,
+                razorpayOrderId: orderResponse.data.razorpayOrderId,
                 paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature
+                signature: response.razorpay_signature,
               });
+
               setOrderPlaced(true);
               clearCart();
             } catch (err) {
-              setError("Payment verification failed");
+              setError(
+                "Payment verification failed: " +
+                  (err.response?.data?.message || err.message)
+              );
+            } finally {
+              setLoading(false);
             }
           },
           prefill: {
@@ -109,23 +127,29 @@ const Payment = ({ mode = "dark" }) => {
             email: user.email,
             contact: user.phone,
           },
-          theme: {
-            color: "#1976d2",
+          theme: { color: "#1976d2" },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+              setError("Payment was cancelled");
+            },
           },
         };
+
         const razorpay = new window.Razorpay(options);
         razorpay.open();
-      } else if (paymentMethod === "razorpay") {
-        setError("Payment failed. Please try again.");
-        return;
       } else {
-        // COD logic
+        // For COD payments
         setOrderPlaced(true);
         clearCart();
+        setLoading(false);
       }
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Payment failed. Please try again.");
-    } finally {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Payment failed. Please try again."
+      );
       setLoading(false);
     }
   };
@@ -140,28 +164,42 @@ const Payment = ({ mode = "dark" }) => {
           <Typography variant="body1" paragraph>
             Thank you for shopping with us.
           </Typography>
-          <Button variant="contained" color="primary" onClick={() => navigate("/account/orders")}>View Orders</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate("/orders")}
+          >
+            View Orders
+          </Button>
         </Paper>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4, bgcolor: mode === "dark" ? "#181818" : "#fff", color: mode === "dark" ? "#fff" : "#181818", minHeight: "100vh" }}>
+    <Container
+      maxWidth="md"
+      sx={{
+        py: 4,
+        bgcolor: mode === "dark" ? "#181818" : "#fff",
+        color: mode === "dark" ? "#fff" : "#181818",
+        minHeight: "100vh",
+      }}
+    >
       <Grid container spacing={4}>
         <Grid item xs={12} md={7}>
           <Paper sx={{ p: 3, mb: 2 }}>
             <Typography variant="h6" gutterBottom>
               Payment Method
-        </Typography>
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Choose your preferred payment method
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TextField
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <TextField
                 label="Coupon Code"
                 value={coupon}
-                onChange={e => setCoupon(e.target.value)}
+                onChange={(e) => setCoupon(e.target.value)}
                 size="small"
                 disabled={couponApplied}
                 sx={{ mr: 2, flex: 1 }}
@@ -172,7 +210,7 @@ const Payment = ({ mode = "dark" }) => {
                 disabled={couponApplied}
                 sx={{ mr: couponApplied ? 2 : 0 }}
               >
-                {couponApplied ? 'Applied' : 'Apply'}
+                {couponApplied ? "Applied" : "Apply"}
               </Button>
               {couponApplied && (
                 <Button
@@ -190,16 +228,24 @@ const Payment = ({ mode = "dark" }) => {
               )}
             </Box>
             {couponError && (
-              <Typography color="error" sx={{ mb: 1 }}>{couponError}</Typography>
+              <Typography color="error" sx={{ mb: 1 }}>
+                {couponError}
+              </Typography>
             )}
             {couponApplied && (
-              <Typography color="success.main" sx={{ mb: 1 }}>Coupon applied! ₹100 off</Typography>
+              <Typography color="success.main" sx={{ mb: 1 }}>
+                Coupon applied! ₹100 off
+              </Typography>
             )}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
               <IconButton color="primary" sx={{ mr: 1 }}>
                 <RemoveRedEyeIcon />
               </IconButton>
-              <Button variant="text" color="primary" sx={{ textTransform: 'none', fontWeight: 600 }}>
+              <Button
+                variant="text"
+                color="primary"
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
                 View Available Offers
               </Button>
             </Box>
@@ -213,8 +259,12 @@ const Payment = ({ mode = "dark" }) => {
                   sx={{
                     p: 2,
                     mb: 2,
-                    borderColor: paymentMethod === "razorpay" ? "primary.main" : "divider",
-                    backgroundColor: paymentMethod === "razorpay" ? "primary.50" : "background.paper",
+                    borderColor:
+                      paymentMethod === "razorpay" ? "primary.main" : "divider",
+                    backgroundColor:
+                      paymentMethod === "razorpay"
+                        ? "primary.50"
+                        : "background.paper",
                     boxShadow: paymentMethod === "razorpay" ? 2 : 0,
                   }}
                 >
@@ -224,24 +274,29 @@ const Payment = ({ mode = "dark" }) => {
                     label={
                       <Box>
                         <Typography variant="subtitle1" fontWeight="bold">
-                          <CreditCardIcon sx={{ mr: 1, verticalAlign: 'middle' }} /> Online Payment (Credit/Debit Card)
+                          <CreditCardIcon
+                            sx={{ mr: 1, verticalAlign: "middle" }}
+                          />{" "}
+                          Online Payment (Credit/Debit Card)
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Pay securely with Razorpay
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mt: 1 }}
+                        >
                           <PaymentsIcon fontSize="small" sx={{ mr: 1 }} />
                           <Typography variant="caption" color="text.secondary">
                             Instant payment confirmation
                           </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
                           <PaymentsIcon fontSize="small" sx={{ mr: 1 }} />
                           <Typography variant="caption" color="text.secondary">
                             Secure SSL encryption
                           </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
                           <CreditCardIcon fontSize="small" sx={{ mr: 1 }} />
                           <Typography variant="caption" color="text.secondary">
                             Multiple card options accepted
@@ -256,8 +311,12 @@ const Payment = ({ mode = "dark" }) => {
                   sx={{
                     p: 2,
                     mb: 2,
-                    borderColor: paymentMethod === "cod" ? "primary.main" : "divider",
-                    backgroundColor: paymentMethod === "cod" ? "primary.50" : "background.paper",
+                    borderColor:
+                      paymentMethod === "cod" ? "primary.main" : "divider",
+                    backgroundColor:
+                      paymentMethod === "cod"
+                        ? "primary.50"
+                        : "background.paper",
                     boxShadow: paymentMethod === "cod" ? 2 : 0,
                   }}
                 >
@@ -267,18 +326,33 @@ const Payment = ({ mode = "dark" }) => {
                     label={
                       <Box>
                         <Typography variant="subtitle1" fontWeight="bold">
-                          <PaymentsIcon sx={{ mr: 1, verticalAlign: 'middle' }} /> Cash on Delivery (COD)
+                          <PaymentsIcon
+                            sx={{ mr: 1, verticalAlign: "middle" }}
+                          />{" "}
+                          Cash on Delivery (COD)
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Pay when you receive your order
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
                           • No upfront payment required
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
                           • Pay with cash or card on delivery
                         </Typography>
-                        <Typography variant="caption" color="warning.main" display="block">
+                        <Typography
+                          variant="caption"
+                          color="warning.main"
+                          display="block"
+                        >
                           • Additional ₹50 COD charge applies
                         </Typography>
                       </Box>
@@ -288,18 +362,34 @@ const Payment = ({ mode = "dark" }) => {
               </RadioGroup>
             </FormControl>
             {error && (
-              <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
             )}
             <Button
               variant="contained"
               color="primary"
               fullWidth
               size="large"
-              sx={{ mt: 3, py: 1.5, fontWeight: 700, fontSize: "1.1rem", borderRadius: 2, background: '#111', letterSpacing: 0.5 }}
+              sx={{
+                mt: 3,
+                py: 1.5,
+                fontWeight: 700,
+                fontSize: "1.1rem",
+                borderRadius: 2,
+                background: "#111",
+                letterSpacing: 0.5,
+              }}
               onClick={handlePlaceOrder}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : `Place Order - ${formatPrice(paymentMethod === "cod" ? total + 50 : total)}`}
+              {loading ? (
+                <CircularProgress size={24} />
+              ) : (
+                `Place Order - ${formatPrice(
+                  paymentMethod === "cod" ? total + 50 : total
+                )}`
+              )}
             </Button>
           </Paper>
         </Grid>
@@ -310,46 +400,71 @@ const Payment = ({ mode = "dark" }) => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             {cart.map((item) => (
-              <Box key={item.product._id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography>{item.product.name} x{item.quantity}</Typography>
-                <Typography>{formatPrice(item.product.price * item.quantity)}</Typography>
+              <Box
+                key={item.product._id}
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
+                <Typography>
+                  {item.product.name} x{item.quantity}
+                </Typography>
+                <Typography>
+                  {formatPrice(item.product.price * item.quantity)}
+                </Typography>
               </Box>
             ))}
             <Divider sx={{ my: 2 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
               <Typography>Subtotal</Typography>
               <Typography>{formatPrice(subtotal)}</Typography>
             </Box>
             {user?.isPremium && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
                 <Typography>Premium Discount</Typography>
-                <Typography color="success.main">-{formatPrice(discount)}</Typography>
+                <Typography color="success.main">
+                  -{formatPrice(discount)}
+                </Typography>
               </Box>
             )}
             {couponDiscount > 0 && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
                 <Typography>Coupon Discount</Typography>
-                <Typography color="success.main">-{formatPrice(couponDiscount)}</Typography>
+                <Typography color="success.main">
+                  -{formatPrice(couponDiscount)}
+                </Typography>
               </Box>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
               <Typography>Shipping</Typography>
               <Typography>{formatPrice(shipping)}</Typography>
             </Box>
             {paymentMethod === "cod" && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
                 <Typography>COD Charge</Typography>
                 <Typography color="warning.main">+₹50</Typography>
               </Box>
             )}
             <Divider sx={{ my: 2 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6" fontWeight={700}>Total</Typography>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+            >
+              <Typography variant="h6" fontWeight={700}>
+                Total
+              </Typography>
               <Typography variant="h6" color="primary" fontWeight={700}>
                 {formatPrice(paymentMethod === "cod" ? total + 50 : total)}
               </Typography>
             </Box>
-      </Paper>
+          </Paper>
         </Grid>
       </Grid>
     </Container>

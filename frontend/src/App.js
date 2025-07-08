@@ -281,7 +281,7 @@ const App = () => {
                       />
                       <Route path="orders" element={<Orders mode={mode} />} />
                       <Route
-                        path="order/:orderId"
+                        path="order/"
                         element={<OrderDetails mode={mode} />}
                       />
 

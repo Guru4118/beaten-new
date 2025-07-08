@@ -87,11 +87,15 @@ const Checkout = ({ mode = "dark" }) => {
       const response = await userAPI.getAddresses();
       setAddresses(response.data.data || response.data);
       // Always use string for _id
-      const defaultAddress = (response.data.data || response.data).find((addr) => addr.isDefault);
+      const defaultAddress = (response.data.data || response.data).find(
+        (addr) => addr.isDefault
+      );
       if (defaultAddress) {
         setSelectedAddress(String(defaultAddress._id));
       } else if ((response.data.data || response.data).length === 1) {
-        setSelectedAddress(String((response.data.data || response.data)[0]._id));
+        setSelectedAddress(
+          String((response.data.data || response.data)[0]._id)
+        );
       }
     } catch (err) {
       setError("Failed to load addresses");
@@ -104,12 +108,21 @@ const Checkout = ({ mode = "dark" }) => {
         setError("Please login to save addresses");
         return;
       }
-      if (!newAddress.name || !newAddress.phone || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.pincode) {
+      if (
+        !newAddress.name ||
+        !newAddress.phone ||
+        !newAddress.street ||
+        !newAddress.city ||
+        !newAddress.state ||
+        !newAddress.pincode
+      ) {
         setError("Please fill in all required fields");
         return;
       }
       if (!/^[6-9]\d{9}$/.test(newAddress.phone)) {
-        setError("Please enter a valid 10-digit phone number starting with 6-9");
+        setError(
+          "Please enter a valid 10-digit phone number starting with 6-9"
+        );
         return;
       }
       if (!/^[1-9][0-9]{5}$/.test(newAddress.pincode)) {
@@ -126,7 +139,7 @@ const Checkout = ({ mode = "dark" }) => {
         state: newAddress.state.trim(),
         pincode: newAddress.pincode.trim(),
         country: "India",
-        isDefault: newAddress.isDefault
+        isDefault: newAddress.isDefault,
       };
       let response;
       if (newAddress._id) {
@@ -134,7 +147,7 @@ const Checkout = ({ mode = "dark" }) => {
       } else {
         response = await userAPI.addAddress(addressData);
       }
-      if (response.data.status === 'success') {
+      if (response.data.status === "success") {
         setAddressDialog(false);
         setError(null);
         fetchAddresses();
@@ -170,79 +183,84 @@ const Checkout = ({ mode = "dark" }) => {
     setError(null);
   };
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress) {
-      setError("Please select a shipping address");
-      return;
-    }
+const handlePlaceOrder = async () => {
+  setLoading(true);
+  setError("");
+  try {
+    // Calculate total with COD charge if applicable
+    const finalTotal = paymentMethod === "cod" ? total + 50 : total;
+    
+    const orderResponse = await ordersAPI.createOrder({
+      items: cart.map((item) => ({
+        product: item.product._id,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+        price: item.product.price,
+      })),
+      shippingAddress: selectedAddress,
+      paymentMethod,
+      total: finalTotal,
+      codCharge: paymentMethod === "cod" ? 50 : 0,
+    });
 
-    setLoading(true);
-    try {
-      // Calculate final total including COD charge
-      const finalTotal = paymentMethod === "cod" ? total + 50 : total;
-
-      // Create order
-      const orderResponse = await ordersAPI.createOrder({
-        items: cart.map((item) => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          size: item.size,
-          color: item.color,
-          price: item.product.price,
-        })),
-        shippingAddress: selectedAddress,
-        paymentMethod,
-        total: finalTotal,
-        codCharge: paymentMethod === "cod" ? 50 : 0,
-      });
-
-      if (paymentMethod === "razorpay") {
-        // Initialize Razorpay payment
-        const options = {
-          key: process.env.REACT_APP_RAZORPAY_KEY,
-          amount: finalTotal * 100, // Razorpay expects amount in paise
-          currency: "INR",
-          name: "BEATEN",
-          description: "Premium Clothing",
-          order_id: orderResponse.data.razorpayOrderId,
-          handler: async (response) => {
-            try {
-              // Verify payment
-              await ordersAPI.verifyPayment({
-                orderId: orderResponse.data._id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-              });
-              setOrderPlaced(true);
-              clearCart();
-            } catch (err) {
-              setError("Payment verification failed");
-            }
-          },
-          prefill: {
-            name: user.name,
-            email: user.email,
-            contact: user.phone,
-          },
-          theme: {
-            color: "#1976d2",
-          },
-        };
-
-        const razorpay = new window.Razorpay(options);
-        razorpay.open();
-      } else {
-        // Handle COD
-        setOrderPlaced(true);
-        clearCart();
+    // For Razorpay payments
+    if (paymentMethod === "razorpay") {
+      if (!orderResponse.data.razorpayOrderId) {
+        throw new Error("Missing Razorpay order ID");
       }
-    } catch (err) {
-      console.error("Place order error:", err);
-      setError("Failed to place order. Please try again.");
-    } finally {
+
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY,
+        amount: orderResponse.data.amount * 100,
+        currency: "INR",
+        name: "BEATEN",
+        description: "Order Payment",
+        order_id: orderResponse.data.razorpayOrderId,
+        handler: async function (response) {
+          try {
+            // Use the verifyPayment method from ordersAPI
+            await ordersAPI.verifyPayment({
+              razorpayOrderId: orderResponse.data.razorpayOrderId,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            });
+            
+            setOrderPlaced(true);
+            clearCart();
+          } catch (err) {
+            setError("Payment verification failed: " + (err.response?.data?.message || err.message));
+          } finally {
+            setLoading(false);
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone,
+        },
+        theme: { color: "#1976d2" },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setError("Payment was cancelled");
+          }
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } else {
+      // For COD payments
+      setOrderPlaced(true);
+      clearCart();
       setLoading(false);
     }
-  };
+  } catch (err) {
+    setError(err?.response?.data?.message || err?.message || "Payment failed. Please try again.");
+    setLoading(false);
+  }
+};
 
   if (orderPlaced) {
     return (
@@ -267,7 +285,7 @@ const Checkout = ({ mode = "dark" }) => {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => navigate("/account/orders")}
+            onClick={() => navigate("/orders")}
           >
             View Orders
           </Button>
@@ -322,9 +340,13 @@ const Checkout = ({ mode = "dark" }) => {
       <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}>
-            <StepLabel sx={{
-              color: mode === "dark" ? "#fff" : "#181818",
-            }} >{label}</StepLabel>
+            <StepLabel
+              sx={{
+                color: mode === "dark" ? "#fff" : "#181818",
+              }}
+            >
+              {label}
+            </StepLabel>
           </Step>
         ))}
       </Stepper>
@@ -367,7 +389,7 @@ const Checkout = ({ mode = "dark" }) => {
                         selectedAddress === address._id
                           ? "primary.main"
                           : "divider",
-                      position: 'relative',
+                      position: "relative",
                     }}
                   >
                     <FormControlLabel
@@ -380,7 +402,8 @@ const Checkout = ({ mode = "dark" }) => {
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {address.addressLine1}
-                            {address.addressLine2 && `, ${address.addressLine2}`}
+                            {address.addressLine2 &&
+                              `, ${address.addressLine2}`}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {address.city}, {address.state} - {address.pincode}
@@ -396,28 +419,47 @@ const Checkout = ({ mode = "dark" }) => {
                         </Box>
                       }
                     />
-                    <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
-                      <IconButton size="small" onClick={() => {
-                        setNewAddress({
-                          name: address.fullName,
-                          phone: address.phone,
-                          street: address.addressLine1,
-                          city: address.city,
-                          state: address.state,
-                          pincode: address.pincode,
-                          isDefault: address.isDefault,
-                          _id: address._id,
-                        });
-                        setAddressDialog(true);
-                      }}>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        display: "flex",
+                        gap: 1,
+                      }}
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setNewAddress({
+                            name: address.fullName,
+                            phone: address.phone,
+                            street: address.addressLine1,
+                            city: address.city,
+                            state: address.state,
+                            pincode: address.pincode,
+                            isDefault: address.isDefault,
+                            _id: address._id,
+                          });
+                          setAddressDialog(true);
+                        }}
+                      >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={async () => {
-                        if (window.confirm('Are you sure you want to delete this address?')) {
-                          await userAPI.deleteAddress(address._id);
-                          fetchAddresses();
-                        }
-                      }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={async () => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to delete this address?"
+                            )
+                          ) {
+                            await userAPI.deleteAddress(address._id);
+                            fetchAddresses();
+                          }
+                        }}
+                      >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Box>

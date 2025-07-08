@@ -35,6 +35,8 @@ import {
   ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { useTheme, useMediaQuery } from "@mui/material";
+import { useEffect } from "react";
+import axios from "axios";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -66,74 +68,7 @@ const getStatusIcon = (status) => {
 
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/80x80?text=Product";
 
-const orders = [
-  {
-    _id: "ORD-1001",
-    createdAt: "2024-06-01",
-    status: "delivered",
-    totalAmount: 2499,
-    address: "123 Demo Street, City, State, 123456",
-    items: [
-      {
-        name: "Black Graphic T-shirt",
-        image:
-          "https://i.pinimg.com/736x/65/f3/21/65f3213693e94dacf246dac482c8e996.jpg",
-        qty: 1,
-        price: 999,
-      },
-      {
-        name: "Oversized Hoodie",
-        image:
-          "https://i.pinimg.com/736x/65/f3/21/65f3213693e94dacf246dac482c8e996.jpg",
-        qty: 1,
-        price: 1500,
-      },
-    ],
-  },
-  {
-    _id: "ORD-1002",
-    createdAt: "2024-05-28",
-    status: "shipped",
-    totalAmount: 1799,
-    address: "456 Example Ave, City, State, 654321",
-    items: [
-      {
-        name: "White Cap",
-        image:
-          "https://i.pinimg.com/736x/65/f3/21/65f3213693e94dacf246dac482c8e996.jpg",
-        qty: 1,
-        price: 1799,
-      },
-    ],
-  },
-  {
-    _id: "ORD-1003",
-    createdAt: "2024-05-20",
-    status: "processing",
-    totalAmount: 3499,
-    address: "789 Sample Road, City, State, 789123",
-    items: [
-      {
-        name: "Joggers",
-        image: "https://via.placeholder.com/80x80?text=Joggers",
-        qty: 1,
-        price: 1499,
-      },
-      {
-        name: "Sneakers",
-        image: "https://via.placeholder.com/80x80?text=Sneakers",
-        qty: 1,
-        price: 1799,
-      },
-      {
-        name: "Socks",
-        image: "https://via.placeholder.com/80x80?text=Socks",
-        qty: 1,
-        price: 201,
-      },
-    ],
-  },
-];
+
 
 const trackingSteps = [
   "Order Placed",
@@ -165,6 +100,34 @@ const Orders = ({ mode }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+  const fetchOrders = async () => {
+    try {
+      const { data } = await axios.get(
+         `http://localhost:5000/api/orders/my-orders`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // or use context
+          },
+        }
+      );
+      setOrders(data);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  if (loading) return <p>Loading orders...</p>;
 
   const handleExpandToggle = (orderId) => {
     setExpandedOrders((prev) =>

@@ -1,23 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const { getOrders, getOrderById, returnOrder, getOrderInvoice, createOrder, verifyPayment } = require('../controllers/orderController');
+const orderController = require('../controllers/orderController'); // Correct path
+const authMiddleware = require('../middleware/auth'); // Correct path
 
-// GET /api/orders
-router.get('/', getOrders);
+// Apply authentication middleware to all order routes
+router.use(authMiddleware.protect);
 
-// POST /api/orders/create
-router.post('/create', createOrder);
+// Create new order
+router.post('/create', orderController.createOrder);
 
-// POST /api/orders/verify-payment
-router.post('/verify-payment', verifyPayment);
+// Verify payment
+router.post('/verify-payment', orderController.verifyPayment);
 
-// POST /api/orders/:id/return
-router.post('/:id/return', returnOrder);
+// Get user's own orders (specific route — must come first)
+router.get('/my-orders', orderController.getOrders);  // <--- 🔥 FIX HERE
 
-// GET /api/orders/:id/invoice
-router.get('/:id/invoice', getOrderInvoice);
 
-// GET /api/orders/:id
-router.get('/:id', getOrderById);
 
-module.exports = router; 
+// Get order by ID
+router.get('/:id', orderController.getOrderById);
+
+// Request return
+router.post('/:id/return', orderController.returnOrder);
+
+// Get invoice
+router.get('/:id/invoice', orderController.getOrderInvoice);
+
+module.exports = router;

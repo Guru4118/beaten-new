@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createPromotions } = require('../controllers/promotionController');
+const { createPromotions ,getAllPromotions} = require('../controllers/promotionController');
 
 // POST /api/promotions/create
 router.post('/create', createPromotions);

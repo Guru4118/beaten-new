@@ -35,24 +35,6 @@ import {
 import { useEffect } from "react";
 
 
-const [existingCodes, setExistingCodes] = useState([]);
-
-
-useEffect(() => {
-  const fetchCodes = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/promotions/");
-      if (!res.ok) throw new Error("Failed to fetch codes");
-      const data = await res.json();
-      setExistingCodes(data);
-    } catch (err) {
-      console.error("Error fetching codes:", err);
-    }
-  };
-
-  fetchCodes();
-}, []);
-
 
 function Promotions() {
   const [page, setPage] = useState(0);
@@ -61,6 +43,22 @@ function Promotions() {
   const [codeType, setCodeType] = useState("coupon");
   const [generatedCodes, setGeneratedCodes] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [existingCodes, setExistingCodes] = useState([]);
+
+  useEffect(() => {
+    const fetchCodes = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/promotions/");
+        if (!res.ok) throw new Error("Failed to fetch codes");
+        const data = await res.json();
+        setExistingCodes(data);
+      } catch (err) {
+        console.error("Error fetching codes:", err);
+      }
+    };
+
+    fetchCodes();
+  }, []);
 
   // Form states
   const [formData, setFormData] = useState({

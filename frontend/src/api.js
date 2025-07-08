@@ -205,6 +205,9 @@ export const ordersAPI = {
   
   // Get invoice for an order
   getOrderInvoice: (orderId) => api.get(`/orders/${orderId}/invoice`),
+
+   // Add this new method for payment verification
+  verifyPayment: (paymentData) => api.post('/orders/verify-payment', paymentData),
 };
 
 // Premium Membership API
