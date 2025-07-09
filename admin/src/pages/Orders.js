@@ -192,25 +192,25 @@ function Orders() {
     // Implement send email functionality
     console.log("Sending email for order:", order.orderNumber);
   };
+// Status update handlers
+const handleStatusUpdate = (order) => {
+  setSelectedOrder(order);
+  // Use the actual lowercase status value
+  setNewStatus(order.status);
+  setStatusDialogOpen(true);
+};
 
-  const handleStatusUpdate = (order) => {
-    setSelectedOrder(order);
-    setNewStatus(order.status);
-    setStatusDialogOpen(true);
-  };
-
- const handleStatusUpdateConfirm = async () => {
+const handleStatusUpdateConfirm = async () => {
   if (!selectedOrder || !newStatus) return;
 
   try {
-    // Show loading state
+    // Ensure we're sending lowercase status
+    const lowercaseStatus = newStatus.toLowerCase();
     
-    
-    // Make API call to update backend
     const token = localStorage.getItem('admin_token');
     const response = await axios.put(
       `http://localhost:5000/api/orders/admin/${selectedOrder._id}`,
-      { status: newStatus },
+      { status: lowercaseStatus },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -219,16 +219,16 @@ function Orders() {
       }
     );
 
-    // Update local state only after successful API response
+    // Update local state - use lowercase status everywhere
     const updatedOrders = orders.map((order) => {
       if (order._id === selectedOrder._id) {
         return {
           ...order,
-          status: newStatus,
+          status: lowercaseStatus,
           statusHistory: [
             ...(order.statusHistory || []),
             {
-              status: newStatus,
+              status: lowercaseStatus,
               timestamp: new Date().toISOString(),
               updatedBy: "Admin",
             },
@@ -239,77 +239,87 @@ function Orders() {
     });
 
     setOrders(updatedOrders);
-    setFilteredOrders(updatedOrders); // Update filtered orders if needed
+    setFilteredOrders(updatedOrders);
     setStatusDialogOpen(false);
     setSelectedOrder(null);
     setNewStatus("");
-    
-    // Show success notification
-    console.log("Status updated successfully:", response.data);
   } catch (error) {
     console.error("Failed to update status:", error);
-    // Show error notification to user
-  } finally {
-    
   }
 };
+
 
   const handleStatusUpdateCancel = () => {
     setStatusDialogOpen(false);
     setSelectedOrder(null);
     setNewStatus("");
   };
+// Updated filtering function with case-insensitive matching
+const updateFilteredOrders = orders
+  .filter((order) => {
+    const matchesSearch =
+     order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+(order.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+order.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase()))
 
-  const updateFilteredOrders = orders
-    .filter((order) => {
-      const matchesSearch =
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        selectedStatus === "All" || order.status === selectedStatus;
-      const matchesDate =
-        (!dateRange.start ||
-          new Date(order.date) >= new Date(dateRange.start)) &&
-        (!dateRange.end || new Date(order.date) <= new Date(dateRange.end));
-      const matchesTotal =
-        (!totalRange.min || order.total >= parseFloat(totalRange.min)) &&
-        (!totalRange.max || order.total <= parseFloat(totalRange.max));
-      return matchesSearch && matchesStatus && matchesDate && matchesTotal;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "date_desc":
-          return new Date(b.date) - new Date(a.date);
-        case "date_asc":
-          return new Date(a.date) - new Date(b.date);
-        case "total_desc":
-          return b.total - a.total;
-        case "total_asc":
-          return a.total - b.total;
-        case "status":
-          return a.status.localeCompare(b.status);
-        default:
-          return 0;
-      }
-    });
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Delivered":
-        return "success";
-      case "Processing":
-        return "info";
-      case "Shipped":
-        return "primary";
-      case "Pending":
-        return "warning";
-      case "Cancelled":
-        return "error";
+    
+    // Case-insensitive status matching
+    const matchesStatus =
+      selectedStatus === "All" || 
+      order.status.toLowerCase() === selectedStatus.toLowerCase();
+    
+    const matchesDate =
+      (!dateRange.start ||
+        new Date(order.date) >= new Date(dateRange.start)) &&
+      (!dateRange.end || new Date(order.date) <= new Date(dateRange.end));
+    
+    const matchesTotal =
+      (!totalRange.min || order.total >= parseFloat(totalRange.min)) &&
+      (!totalRange.max || order.total <= parseFloat(totalRange.max));
+    
+    return matchesSearch && matchesStatus && matchesDate && matchesTotal;
+  })
+  .sort((a, b) => {
+    switch (sortBy) {
+      case "date_desc":
+        return new Date(b.date) - new Date(a.date);
+      case "date_asc":
+        return new Date(a.date) - new Date(b.date);
+      case "total_desc":
+        return b.total - a.total;
+      case "total_asc":
+        return a.total - b.total;
+      case "status":
+        // Compare lowercase status for accurate sorting
+        return a.status.toLowerCase().localeCompare(b.status.toLowerCase());
       default:
-        return "default";
+        return 0;
     }
-  };
+  });
+
+ 
+// Status display function - handles lowercase values
+const getStatusColor = (status) => {
+  // Ensure we handle lowercase status values
+  const lowerStatus = status.toLowerCase();
+  
+  switch (lowerStatus) {
+    case "delivered":
+      return "success";
+    case "processing":
+      return "info";
+    case "shipped":
+      return "primary";
+    case "pending":
+      return "warning";
+    case "cancelled":
+      return "error";
+    case "returned":
+      return "secondary";
+    default:
+      return "default";
+  }
+};
 
   const OrderDetails = ({ order }) => (
     <Box>

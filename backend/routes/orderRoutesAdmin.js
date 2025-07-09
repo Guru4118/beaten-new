@@ -28,4 +28,13 @@ const validateObjectId = (req, res, next) => {
 router.route('/:id')
   .put(validateObjectId, updateOrderStatus);
 
+
+  // routes/orderAdminRoutes.js
+router.put(
+  '/:id',
+  protect,   // Auth middleware
+  admin,     // Admin check middleware
+  validateObjectId,
+  updateOrderStatus
+);
 module.exports = router;

@@ -101,22 +101,23 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
 
     if (!order) {
-      res.status(404);
-      throw new Error("Order not found");
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    // Validate status - MUST MATCH YOUR ORDER MODEL ENUM
+    // Convert to lowercase for validation
+    const lowerStatus = status.toLowerCase();
+
+    // Validate status (case-insensitive)
     const validStatuses = [
       "pending", "processing", "shipped", "delivered", "cancelled", "returned"
     ];
     
-    if (!validStatuses.includes(status)) {
-      res.status(400);
-      throw new Error("Invalid order status");
+    if (!validStatuses.includes(lowerStatus)) {
+      return res.status(400).json({ message: "Invalid order status" });
     }
 
     // Update order
-    order.status = status;
+    order.status = lowerStatus;
     if (trackingNumber) {
       order.trackingNumber = trackingNumber;
     }
@@ -124,9 +125,9 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     // Add to status history
     order.statusHistory = order.statusHistory || [];
     order.statusHistory.push({
-      status,
+      status: lowerStatus,
       timestamp: new Date(),
-      updatedBy: req.user ? req.user.id : "admin" // Use actual user ID
+      updatedBy: req.user._id
     });
 
     const updatedOrder = await order.save();

@@ -71,6 +71,7 @@ const orderSchema = new mongoose.Schema({
     unique: true,
     default: () => `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`
   },
+  statusHistory: [statusHistorySchema],
   razorpayOrderId: String,
   razorpayPaymentId: String,
   razorpaySignature: String
