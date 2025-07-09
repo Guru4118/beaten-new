@@ -62,6 +62,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/orders/admin',adminOrder);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productsRoutes);
@@ -70,7 +71,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/promotions', promotionRoutes);
-app.use('/api/orders',adminOrder);
+
 
 // 404 handler
 app.use(notFound);

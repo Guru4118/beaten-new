@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';import {
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import {
   Box,
   Paper,
   Typography,
@@ -41,8 +42,8 @@ import axios from 'axios';import {
   ListItemText,
   ListItemAvatar,
   DialogContentText,
-  ListItemIcon
-} from '@mui/material';
+  ListItemIcon,
+} from "@mui/material";
 import {
   Visibility as ViewIcon,
   Edit as EditIcon,
@@ -72,62 +73,60 @@ import {
   FileDownload as ExportIcon,
   Visibility as ViewDetailsIcon,
   Edit as EditStatusIcon,
-  History as ViewHistoryIcon
-} from '@mui/icons-material';
+  History as ViewHistoryIcon,
+} from "@mui/icons-material";
 
+// Change validation to lowercase
 
-
-
-const statuses = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 const sortOptions = [
-  { value: 'date_desc', label: 'Newest First' },
-  { value: 'date_asc', label: 'Oldest First' },
-  { value: 'total_desc', label: 'Highest Amount' },
-  { value: 'total_asc', label: 'Lowest Amount' },
-  { value: 'status', label: 'Status' }
+  { value: "date_desc", label: "Newest First" },
+  { value: "date_asc", label: "Oldest First" },
+  { value: "total_desc", label: "Highest Amount" },
+  { value: "total_asc", label: "Lowest Amount" },
+  { value: "status", label: "Status" },
 ];
 
 function Orders() {
-   
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All");
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [sortBy, setSortBy] = useState('date_desc');
+  const [sortBy, setSortBy] = useState("date_desc");
   const [showFilters, setShowFilters] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [totalRange, setTotalRange] = useState({ min: '', max: '' });
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [totalRange, setTotalRange] = useState({ min: "", max: "" });
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState('');
- const [orders, setOrders] = useState([]);
+  const [newStatus, setNewStatus] = useState("");
+  const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  
+
   // Define orderStatuses inside the component to access the imported icons
   const orderStatuses = [
-    { value: 'Pending', color: 'warning', icon: <PendingTimeIcon /> },
-    { value: 'Processing', color: 'info', icon: <ProcessingInventoryIcon /> },
-    { value: 'Shipped', color: 'primary', icon: <ShippedIcon /> },
-    { value: 'Delivered', color: 'success', icon: <DeliveredIcon /> },
-    { value: 'Cancelled', color: 'error', icon: <CancelledIcon /> },
+    { value: "Pending", color: "warning", icon: <PendingTimeIcon /> },
+    { value: "Processing", color: "info", icon: <ProcessingInventoryIcon /> },
+    { value: "Shipped", color: "primary", icon: <ShippedIcon /> },
+    { value: "Delivered", color: "success", icon: <DeliveredIcon /> },
+    { value: "Cancelled", color: "error", icon: <CancelledIcon /> },
   ];
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const token = localStorage.getItem('admin_token');
-        const res = await axios.get('http://localhost:5000/api/orders/admin', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        const token = localStorage.getItem("admin_token");
+        const res = await axios.get("http://localhost:5000/api/orders/admin", {
+          headers: { Authorization: `Bearer ${token}` },
         });
+
+        console.log("API Response:", res.data); // 👈 ADD THIS
+
         setOrders(res.data);
-        setFilteredOrders(res.data); // if you want filtering
+        setFilteredOrders(res.data);
+        console.log(res.data);
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error("Failed to fetch orders:", error);
       }
     };
-
     fetchOrders();
   }, []);
 
@@ -166,15 +165,18 @@ function Orders() {
   };
 
   const handleExport = () => {
-    const csvContent = filteredOrders.map(order => 
-      `${order.orderNumber},${order.customer.name},${order.date},${order.total},${order.status},${order.paymentMethod}`
-    ).join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = filteredOrders
+      .map(
+        (order) =>
+          `${order.orderNumber},${order.customer.name},${order.date},${order.total},${order.status},${order.paymentMethod}`
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `orders_${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -183,12 +185,12 @@ function Orders() {
 
   const handlePrintInvoice = (order) => {
     // Implement print invoice functionality
-    console.log('Printing invoice for order:', order.orderNumber);
+    console.log("Printing invoice for order:", order.orderNumber);
   };
 
   const handleSendEmail = (order) => {
     // Implement send email functionality
-    console.log('Sending email for order:', order.orderNumber);
+    console.log("Sending email for order:", order.orderNumber);
   };
 
   const handleStatusUpdate = (order) => {
@@ -197,91 +199,115 @@ function Orders() {
     setStatusDialogOpen(true);
   };
 
-  const handleStatusUpdateConfirm = () => {
-    if (selectedOrder && newStatus) {
-      // Here you would typically make an API call to update the order status
-      console.log('Updating order status:', {
-        orderId: selectedOrder._id,
-        newStatus,
-        timestamp: new Date().toISOString()
-      });
+ const handleStatusUpdateConfirm = async () => {
+  if (!selectedOrder || !newStatus) return;
 
-      // Update the order in the local state
-      const updatedOrders = orders.map(order => {
-        if (order._id === selectedOrder._id) {
-          return {
-            ...order,
-            status: newStatus,
-            statusHistory: [
-              ...(order.statusHistory || []),
-              {
-                status: newStatus,
-                timestamp: new Date().toISOString(),
-                updatedBy: 'Admin' // In a real app, this would be the current user
-              }
-            ]
-          };
+  try {
+    // Show loading state
+    
+    
+    // Make API call to update backend
+    const token = localStorage.getItem('admin_token');
+    const response = await axios.put(
+      `http://localhost:5000/api/orders/admin/${selectedOrder._id}`,
+      { status: newStatus },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-        return order;
-      });
+      }
+    );
 
-      // Update the orders array
-      orders.length = 0;
-      orders.push(...updatedOrders);
+    // Update local state only after successful API response
+    const updatedOrders = orders.map((order) => {
+      if (order._id === selectedOrder._id) {
+        return {
+          ...order,
+          status: newStatus,
+          statusHistory: [
+            ...(order.statusHistory || []),
+            {
+              status: newStatus,
+              timestamp: new Date().toISOString(),
+              updatedBy: "Admin",
+            },
+          ],
+        };
+      }
+      return order;
+    });
 
-      setStatusDialogOpen(false);
-      setSelectedOrder(null);
-      setNewStatus('');
-    }
-  };
+    setOrders(updatedOrders);
+    setFilteredOrders(updatedOrders); // Update filtered orders if needed
+    setStatusDialogOpen(false);
+    setSelectedOrder(null);
+    setNewStatus("");
+    
+    // Show success notification
+    console.log("Status updated successfully:", response.data);
+  } catch (error) {
+    console.error("Failed to update status:", error);
+    // Show error notification to user
+  } finally {
+    
+  }
+};
 
   const handleStatusUpdateCancel = () => {
     setStatusDialogOpen(false);
     setSelectedOrder(null);
-    setNewStatus('');
+    setNewStatus("");
   };
 
-  const updateFilteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'All' || order.status === selectedStatus;
-    const matchesDate = (!dateRange.start || new Date(order.date) >= new Date(dateRange.start)) &&
-                       (!dateRange.end || new Date(order.date) <= new Date(dateRange.end));
-    const matchesTotal = (!totalRange.min || order.total >= parseFloat(totalRange.min)) &&
-                        (!totalRange.max || order.total <= parseFloat(totalRange.max));
-    return matchesSearch && matchesStatus && matchesDate && matchesTotal;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'date_desc':
-        return new Date(b.date) - new Date(a.date);
-      case 'date_asc':
-        return new Date(a.date) - new Date(b.date);
-      case 'total_desc':
-        return b.total - a.total;
-      case 'total_asc':
-        return a.total - b.total;
-      case 'status':
-        return a.status.localeCompare(b.status);
-      default:
-        return 0;
-    }
-  });
+  const updateFilteredOrders = orders
+    .filter((order) => {
+      const matchesSearch =
+        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        selectedStatus === "All" || order.status === selectedStatus;
+      const matchesDate =
+        (!dateRange.start ||
+          new Date(order.date) >= new Date(dateRange.start)) &&
+        (!dateRange.end || new Date(order.date) <= new Date(dateRange.end));
+      const matchesTotal =
+        (!totalRange.min || order.total >= parseFloat(totalRange.min)) &&
+        (!totalRange.max || order.total <= parseFloat(totalRange.max));
+      return matchesSearch && matchesStatus && matchesDate && matchesTotal;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "date_desc":
+          return new Date(b.date) - new Date(a.date);
+        case "date_asc":
+          return new Date(a.date) - new Date(b.date);
+        case "total_desc":
+          return b.total - a.total;
+        case "total_asc":
+          return a.total - b.total;
+        case "status":
+          return a.status.localeCompare(b.status);
+        default:
+          return 0;
+      }
+    });
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Delivered':
-        return 'success';
-      case 'Processing':
-        return 'info';
-      case 'Shipped':
-        return 'primary';
-      case 'Pending':
-        return 'warning';
-      case 'Cancelled':
-        return 'error';
+      case "Delivered":
+        return "success";
+      case "Processing":
+        return "info";
+      case "Shipped":
+        return "primary";
+      case "Pending":
+        return "warning";
+      case "Cancelled":
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
   };
 
@@ -384,7 +410,9 @@ function Orders() {
                     </ListItemAvatar>
                     <ListItemText
                       primary={item.product}
-                      secondary={`Quantity: ${item.quantity} × $${item.price.toFixed(2)}`}
+                      secondary={`Quantity: ${
+                        item.quantity
+                      } × $${item.price.toFixed(2)}`}
                     />
                     <Typography variant="subtitle1">
                       ${(item.quantity * item.price).toFixed(2)}
@@ -395,7 +423,7 @@ function Orders() {
                 <ListItem>
                   <ListItemText
                     primary="Total"
-                    primaryTypographyProps={{ variant: 'h6' }}
+                    primaryTypographyProps={{ variant: "h6" }}
                   />
                   <Typography variant="h6" color="primary">
                     ${order.total.toFixed(2)}
@@ -412,9 +440,7 @@ function Orders() {
                 <Typography variant="h6" gutterBottom>
                   Notes
                 </Typography>
-                <Typography variant="body1">
-                  {order.notes}
-                </Typography>
+                <Typography variant="body1">{order.notes}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -428,15 +454,13 @@ function Orders() {
 
     return (
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Order Details - {order.orderNumber}
-        </DialogTitle>
+        <DialogTitle>Order Details - {order.orderNumber}</DialogTitle>
         <DialogContent>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <OrderDetails order={order} />
             </Grid>
-            
+
             {/* Status History Section */}
             <Grid item xs={12}>
               <Card>
@@ -449,7 +473,11 @@ function Orders() {
                       <React.Fragment key={index}>
                         <ListItem>
                           <ListItemIcon>
-                            {orderStatuses.find(s => s.value === history.status)?.icon}
+                            {
+                              orderStatuses.find(
+                                (s) => s.value === history.status
+                              )?.icon
+                            }
                           </ListItemIcon>
                           <ListItemText
                             primary={history.status}
@@ -458,14 +486,19 @@ function Orders() {
                                 <Typography variant="body2" component="span">
                                   {new Date(history.timestamp).toLocaleString()}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
                                   Updated by: {history.updatedBy}
                                 </Typography>
                               </>
                             }
                           />
                         </ListItem>
-                        {index < (order.statusHistory || []).length - 1 && <Divider />}
+                        {index < (order.statusHistory || []).length - 1 && (
+                          <Divider />
+                        )}
                       </React.Fragment>
                     ))}
                   </List>
@@ -489,31 +522,31 @@ function Orders() {
   };
 
   // Status Update Dialog
-  const StatusUpdateDialog = ({ 
-    open, 
-    onClose, 
-    order, 
+  const StatusUpdateDialog = ({
+    open,
+    onClose,
+    order,
     newStatus,
     onNewStatusChange,
-    onConfirm
+    onConfirm,
   }) => {
     if (!order) return null;
 
     return (
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="sm" 
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
         fullWidth
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
+          if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             onConfirm();
           }
         }}
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <EditStatusIcon color="primary" />
             <Typography variant="h6">Update Order Status</Typography>
           </Box>
@@ -523,7 +556,7 @@ function Orders() {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               Order Information
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
                 Order Number:
               </Typography>
@@ -531,7 +564,7 @@ function Orders() {
                 {order.orderNumber}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Current Status:
               </Typography>
@@ -539,7 +572,7 @@ function Orders() {
                 label={order.status}
                 color={getStatusColor(order.status)}
                 size="small"
-                icon={orderStatuses.find(s => s.value === order.status)?.icon}
+                icon={orderStatuses.find((s) => s.value === order.status)?.icon}
               />
             </Box>
           </Box>
@@ -559,28 +592,30 @@ function Orders() {
                 MenuProps={{
                   PaperProps: {
                     style: {
-                      maxHeight: 300
-                    }
-                  }
+                      maxHeight: 300,
+                    },
+                  },
                 }}
               >
                 {orderStatuses.map((status) => (
-                  <MenuItem 
-                    key={status.value} 
+                  <MenuItem
+                    key={status.value}
                     value={status.value}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       gap: 1,
-                      py: 1
+                      py: 1,
                     }}
                   >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      color: `${status.color}.main`
-                    }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        color: `${status.color}.main`,
+                      }}
+                    >
                       {status.icon}
                       <Typography>{status.value}</Typography>
                     </Box>
@@ -591,20 +626,14 @@ function Orders() {
           </Box>
 
           {newStatus !== order.status && (
-            <Alert 
-              severity="info" 
-              sx={{ mt: 2 }}
-              icon={<EditStatusIcon />}
-            >
-              Status will be updated from <strong>{order.status}</strong> to <strong>{newStatus}</strong>
+            <Alert severity="info" sx={{ mt: 2 }} icon={<EditStatusIcon />}>
+              Status will be updated from <strong>{order.status}</strong> to{" "}
+              <strong>{newStatus}</strong>
             </Alert>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'background.default' }}>
-          <Button 
-            onClick={onClose}
-            variant="outlined"
-          >
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: "background.default" }}>
+          <Button onClick={onClose} variant="outlined">
             Cancel
           </Button>
           <Button
@@ -620,19 +649,30 @@ function Orders() {
       </Dialog>
     );
   };
+const statuses = [
+  "pending",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned"
+];
 
   return (
+    
     <Box sx={{ p: 3 }}>
       {/* Header Section */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 4,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        pb: 2
-      }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          pb: 2,
+        }}
+      >
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
             Order Management
@@ -641,14 +681,14 @@ function Orders() {
             Manage and track all customer orders
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<FilterIcon />}
             onClick={() => setShowFilters(!showFilters)}
             sx={{ minWidth: 120 }}
           >
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            {showFilters ? "Hide Filters" : "Show Filters"}
           </Button>
           <Button
             variant="contained"
@@ -662,14 +702,14 @@ function Orders() {
       </Box>
 
       {/* Filters and Search */}
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 3, 
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2
+        sx={{
+          p: 3,
+          mb: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
         }}
       >
         <Grid container spacing={3} alignItems="center">
@@ -686,10 +726,10 @@ function Orders() {
                   </InputAdornment>
                 ),
               }}
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2
-                }
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
               }}
             />
           </Grid>
@@ -700,11 +740,11 @@ function Orders() {
                 value={selectedStatus}
                 label="Filter by Status"
                 onChange={handleStatusChange}
-                sx={{ 
+                sx={{
                   borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'divider'
-                  }
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "divider",
+                  },
                 }}
               >
                 {statuses.map((status) => (
@@ -722,11 +762,11 @@ function Orders() {
                 value={sortBy}
                 label="Sort Orders"
                 onChange={handleSortChange}
-                sx={{ 
+                sx={{
                   borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'divider'
-                  }
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "divider",
+                  },
                 }}
               >
                 {sortOptions.map((option) => (
@@ -740,76 +780,108 @@ function Orders() {
         </Grid>
 
         {showFilters && (
-          <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box
+            sx={{
+              mt: 3,
+              pt: 3,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   Date Range
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <TextField
                     label="Start Date"
                     type="date"
                     value={dateRange.start}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    onChange={(e) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        start: e.target.value,
+                      }))
+                    }
                     InputLabelProps={{ shrink: true }}
                     fullWidth
-                    sx={{ 
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2
-                      }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
                     }}
                   />
                   <TextField
                     label="End Date"
                     type="date"
                     value={dateRange.end}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    onChange={(e) =>
+                      setDateRange((prev) => ({ ...prev, end: e.target.value }))
+                    }
                     InputLabelProps={{ shrink: true }}
                     fullWidth
-                    sx={{ 
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2
-                      }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
                     }}
                   />
                 </Box>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   Total Amount Range
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <TextField
                     label="Minimum Amount"
                     type="number"
                     value={totalRange.min}
-                    onChange={(e) => setTotalRange(prev => ({ ...prev, min: e.target.value }))}
-                    InputProps={{ 
+                    onChange={(e) =>
+                      setTotalRange((prev) => ({
+                        ...prev,
+                        min: e.target.value,
+                      }))
+                    }
+                    InputProps={{
                       startAdornment: <PaymentIcon color="action" />,
-                      inputProps: { min: 0 }
+                      inputProps: { min: 0 },
                     }}
                     fullWidth
-                    sx={{ 
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2
-                      }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
                     }}
                   />
                   <TextField
                     label="Maximum Amount"
                     type="number"
                     value={totalRange.max}
-                    onChange={(e) => setTotalRange(prev => ({ ...prev, max: e.target.value }))}
-                    InputProps={{ 
+                    onChange={(e) =>
+                      setTotalRange((prev) => ({
+                        ...prev,
+                        max: e.target.value,
+                      }))
+                    }
+                    InputProps={{
                       startAdornment: <PaymentIcon color="action" />,
-                      inputProps: { min: 0 }
+                      inputProps: { min: 0 },
                     }}
                     fullWidth
-                    sx={{ 
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2
-                      }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
                     }}
                   />
                 </Box>
@@ -820,14 +892,14 @@ function Orders() {
       </Paper>
 
       {/* Orders Table */}
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
-          width: '100%', 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2
+        sx={{
+          width: "100%",
+          overflow: "hidden",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
         }}
       >
         <TableContainer>
@@ -847,10 +919,10 @@ function Orders() {
               {filteredOrders
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((order) => (
-                  <TableRow 
+                  <TableRow
                     key={order._id}
                     hover
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
@@ -873,11 +945,14 @@ function Orders() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <CartIcon fontSize="small" color="action" />
-                        <Typography variant="body2">
-                          {order.items.reduce((sum, item) => sum + item.quantity, 0)} items
-                        </Typography>
+                         <Typography variant="body2">
+      {/* Use the actual items array */}
+      {order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} items
+    </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -890,29 +965,32 @@ function Orders() {
                         label={order.status}
                         color={getStatusColor(order.status)}
                         size="small"
-                        icon={orderStatuses.find(s => s.value === order.status)?.icon}
-                        sx={{ 
+                        icon={
+                          orderStatuses.find((s) => s.value === order.status)
+                            ?.icon
+                        }
+                        sx={{
                           fontWeight: 500,
-                          '& .MuiChip-icon': {
-                            color: 'inherit'
-                          }
+                          "& .MuiChip-icon": {
+                            color: "inherit",
+                          },
                         }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ display: "flex", gap: 1 }}>
                         <Tooltip title="View Details">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleOpenDialog(order)}
-                            sx={{ color: 'primary.main' }}
+                            sx={{ color: "primary.main" }}
                           >
                             <ViewDetailsIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Update Status">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             color="primary"
                             onClick={() => handleStatusUpdate(order)}
                           >
@@ -920,10 +998,10 @@ function Orders() {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="View History">
-                          <IconButton 
+                          <IconButton
                             size="small"
                             onClick={() => handleOpenDialog(order)}
-                            sx={{ color: 'info.main' }}
+                            sx={{ color: "info.main" }}
                           >
                             <ViewHistoryIcon />
                           </IconButton>
@@ -944,8 +1022,8 @@ function Orders() {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           sx={{
-            borderTop: '1px solid',
-            borderColor: 'divider'
+            borderTop: "1px solid",
+            borderColor: "divider",
           }}
         />
       </Paper>
@@ -970,4 +1048,4 @@ function Orders() {
   );
 }
 
-export default Orders; 
+export default Orders;

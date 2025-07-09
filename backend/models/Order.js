@@ -26,6 +26,11 @@ const shippingAddressSchema = new mongoose.Schema({
   pincode: String,
   phone: String
 });
+const statusHistorySchema = new mongoose.Schema({
+  status: String,
+  timestamp: { type: Date, default: Date.now },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
 
 const orderSchema = new mongoose.Schema({
   user: {

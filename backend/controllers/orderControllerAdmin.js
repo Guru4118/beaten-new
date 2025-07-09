@@ -12,26 +12,30 @@ const safeGetYear = (date) => {
 // @access  Private/Admin
 const getAdminOrders = asyncHandler(async (req, res) => {
   try {
-    // Fetch orders with safe population
+    // Fetch orders with proper population
     const orders = await Order.find({})
       .populate({
         path: "user",
         select: "name email",
         model: User,
-        options: { allowNull: true } // Handle deleted users
+        options: { allowNull: true }
+      })
+      .populate({
+        path: "items.product",
+        select: "name image", // Populate product details
+        model: "Product"
       })
       .sort({ createdAt: -1 });
 
-    // Format orders with defensive programming
+    // Format orders to match frontend expectations
     const formattedOrders = orders.map((order) => {
-      // Safely handle customer info
       let customer = {
         name: "Guest User",
         email: "guest@example.com",
         phone: ""
       };
       
-      if (order.user && order.user instanceof User) {
+      if (order.user) {
         customer = {
           name: order.user.name || "No Name",
           email: order.user.email || "no-email@example.com",
@@ -39,27 +43,25 @@ const getAdminOrders = asyncHandler(async (req, res) => {
         };
       }
 
-      // Safely handle order ID
-      const orderIdSuffix = order._id 
-        ? order._id.toString().slice(-4) 
-        : "0000";
+      // Generate order number if not present
+      const orderIdSuffix = order._id.toString().slice(-4);
+      const orderNumber = order.orderNumber || `ORD-${safeGetYear(order.createdAt)}-${orderIdSuffix}`;
 
-      // Safely handle order items
-      const items = (order.orderItems || []).map((item) => ({
-        product: item?.name || "Unknown Product",
-        quantity: item?.qty || 0,
-        price: item?.price || 0,
-        image: item?.image || ""
+      // Map items to match frontend structure
+      const items = (order.items || []).map((item) => ({
+        name: item.product?.name || "Unknown Product",
+        quantity: item.quantity || 0,
+        price: item.price || 0,
+        image: item.product?.image || ""
       }));
 
       return {
-        _id: order._id || null,
-        orderNumber: `ORD-${safeGetYear(order.createdAt)}-${orderIdSuffix}`,
+        _id: order._id,
+        orderNumber,
         customer,
-        date: order.createdAt 
-          ? order.createdAt.toISOString().split("T")[0] 
-          : "1970-01-01",
-        total: order.totalPrice || 0,
+        date: order.createdAt.toISOString().split("T")[0],
+        items, // Use actual items array
+        total: order.totalAmount, // Use correct total field
         status: order.status || "Unknown",
         paymentMethod: order.paymentMethod || "N/A",
         shippingAddress: order.shippingAddress
@@ -67,10 +69,9 @@ const getAdminOrders = asyncHandler(async (req, res) => {
               order.shippingAddress.city || ""
             }, ${order.shippingAddress.country || ""}`
           : "No shipping address",
-        items,
         trackingNumber: order.trackingNumber || null,
         notes: order.notes || "",
-        createdAt: order.createdAt || new Date(0)
+        createdAt: order.createdAt
       };
     });
 
@@ -90,6 +91,9 @@ const getAdminOrders = asyncHandler(async (req, res) => {
 // @desc    Update order status
 // @route   PUT /api/orders/admin/:id
 // @access  Private/Admin
+// @desc    Update order status
+// @route   PUT /api/orders/admin/:id
+// @access  Private/Admin
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, trackingNumber } = req.body;
 
@@ -101,14 +105,11 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       throw new Error("Order not found");
     }
 
-    // Validate status
+    // Validate status - MUST MATCH YOUR ORDER MODEL ENUM
     const validStatuses = [
-      "Pending",
-      "Processing",
-      "Shipped",
-      "Delivered",
-      "Cancelled",
+      "pending", "processing", "shipped", "delivered", "cancelled", "returned"
     ];
+    
     if (!validStatuses.includes(status)) {
       res.status(400);
       throw new Error("Invalid order status");
@@ -119,6 +120,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     if (trackingNumber) {
       order.trackingNumber = trackingNumber;
     }
+
+    // Add to status history
+    order.statusHistory = order.statusHistory || [];
+    order.statusHistory.push({
+      status,
+      timestamp: new Date(),
+      updatedBy: req.user ? req.user.id : "admin" // Use actual user ID
+    });
 
     const updatedOrder = await order.save();
 
@@ -137,21 +146,22 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 });
 
+
 // @desc    Get order statistics for dashboard
 // @route   GET /api/orders/admin/stats
 // @access  Private/Admin
 const getOrderStats = asyncHandler(async (req, res) => {
   try {
-    // Calculate total orders
+   // Calculate total orders
     const totalOrders = await Order.countDocuments();
 
-    // Calculate total revenue
+    // Calculate total revenue - use totalAmount
     const revenueStats = await Order.aggregate([
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: "$totalPrice" },
-          averageOrderValue: { $avg: "$totalPrice" },
+          totalRevenue: { $sum: "$totalAmount" },
+          averageOrderValue: { $avg: "$totalAmount" },
         },
       },
     ]);
@@ -185,16 +195,14 @@ const getOrderStats = asyncHandler(async (req, res) => {
       statusStats,
       recentOrders: recentOrders.map((order) => ({
         _id: order._id,
-        orderNumber: `ORD-${order.createdAt.getFullYear()}-${order._id
-          .toString()
-          .slice(-4)}`,
+        orderNumber: order.orderNumber || `ORD-${order.createdAt.getFullYear()}-${order._id.toString().slice(-4)}`,
         customer: order.user?.name || "Guest",
         date: order.createdAt.toISOString().split("T")[0],
-        total: order.totalPrice,
+        total: order.totalAmount, // Use totalAmount
         status: order.status,
       })),
     });
-  } catch (error) {
+  }catch (error) {
     console.error("Error fetching order statistics:", error);
     res.status(500).json({
       message: "Server error while fetching statistics",
